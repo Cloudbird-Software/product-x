@@ -1,0 +1,12 @@
+/.github/**            @randypanding
+/settings/**           @randypanding
+/contracts/**          @randypanding
+/tests/acceptance/**   @randypanding
+/CHARTER.md            @randypanding
+/AGENTS.md             @randypanding
+/.specify/**           @randypanding
+/Dockerfile*           @randypanding
+/**/migrations/**      @randypanding
+package-lock.json      @randypanding
+poetry.lock            @randypanding
+go.sum                 @randypanding
