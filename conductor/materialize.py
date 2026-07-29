@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# 由模板生成，本地禁止手改。变更请改模板（product-x）并走 loop 流程。见 TEMPLATE.md「生成层」。
 """conductor/materialize.py — 手册 6.2 物化校验 + 造卡。
 
 校验四项（任一不满足 → 不物化，开 Incident）：
