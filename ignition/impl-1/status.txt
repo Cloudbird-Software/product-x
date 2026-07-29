@@ -1,0 +1,10 @@
+=== loopd status ===
+sandbox: impl-1
+role: impl
+model: kimi-2.7-code
+session_ordinal: 1 / 6
+card: #15 (ignition-probe-1) state=claimed
+lease: 44m left
+token: set
+daemon: alive (pid=4491)
+=== OK ===
