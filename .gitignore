@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+
+# loop daemon state
+.loop/
