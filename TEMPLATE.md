@@ -78,7 +78,7 @@
 | `prompts/P0.md` … `P10.md` | 角色提示词本体 | 不复制；沙盒 bootstrap 按 `LOOP_PROMPTS_SHA` pin 拉取 |
 | `loopd/**`、`.loop/scripts/**` | loop 守护进程与脚本本体 | 不复制；沙盒 bootstrap 安装 |
 | `conductor/drift_check.py` 等 | 跨仓 conductor（drift / scribe / tick / upgrade） | 不复制；loop 仓侧运行 |
-| `settings/main-protection.json` | org ruleset 定义（main 保护 + merge queue） | 不复制；由 loop 仓 `policy.yml` 下发（见 SOP 第 4 步） |
+| `settings/main-protection.json` | org ruleset 定义（main 保护 + merge queue） | 不复制；由 loop 仓 `policy.yml` 下发（见 SOP 第 5 步） |
 
 > 判据：**改它会影响所有 `product-*`** → 它在共享层（loop 仓）。
 > **改它只影响本产品灵魂** → 它在灵魂层（本仓，重写）。
@@ -110,13 +110,38 @@
 > 验证：`grep -rn "product-x" --exclude-dir=waves .` 在改完后应**无输出**
 > （`waves/**` 是灵魂层，模板自举波应删/重写，不算残留）。
 
-### 第 2 步：清灵魂层占位
+### 第 2 步：补 4 个自定义 label（模板不复制 label）
+
+GitHub「Use this template」**不复制 label**。`materializer` 用 `--label card` 造卡，
+缺 `card` label 会**静默失败**（卡过了校验、issue 却没建成，workflow 仍报绿）。
+复制后立即补这 4 个自定义 label（颜色对齐 product-x；GitHub 默认 9 个 label 已自带）：
+
+| label | color | 用途 |
+|---|---|---|
+| `card` | `1d76db` | materializer 物化的卡（**必需**，否则造卡失败） |
+| `claimed` | `fbca04` | 卡被沙盒领取 |
+| `done` | `0e8a16` | 卡完成 |
+| `gripe` | `aaaaaa` | 吐槽箱 issue |
+
+一键创建（`gh` 已登录即可，`<新产品名>` 替换为实际仓名）：
+
+```bash
+for l in "card 1d76db" "claimed fbca04" "done 0e8a16" "gripe aaaaaa"; do
+  set -- $l
+  gh api -X POST repos/Cloudbird-Software/<新产品名>/labels -f name="$1" -f color="$2" >/dev/null
+done
+```
+
+> `materialize.py` 校验失败时还会 `--label incident` 开 Incident；`incident` label 不在
+> product-x 默认集里，需要时一并建（`-f name=incident -f color=b60205`）。
+
+### 第 3 步：清灵魂层占位
 
 - 删 `waves/WAVE-1.md`（模板自举波，不是新产品的）。
 - 按新产品写自己的 `CHARTER.md`、`contracts/**`、`tests/acceptance/**`、`waves/WAVE-1.md`。
 - （可后补）先建一个最小 `WAVE-1.md` 让力工池能领卡即可。
 
-### 第 3 步：发新 worker PAT
+### 第 4 步：发新 worker PAT
 
 为新产品发一枚 **fine-grained PAT**（沙盒语境记 `GH_TOKEN`，探针语境记 `WK_PAT`，同一枚）：
 - 作用域：仅本新 `product-*` 仓；
@@ -126,7 +151,7 @@
 
 > 见 loop 仓 `Trae沙盒填写卡.md` ③ 敏感变量：每个沙盒的 `GH_TOKEN` 就是这枚 PAT。
 
-### 第 4 步：org ruleset 自动护住（第 8 波后）
+### 第 5 步：org ruleset 自动护住（第 8 波后）
 
 `main` 保护（deletion / non-fast-forward / merge queue / 线性历史 / 必审）由 loop 仓
 `settings/main-protection.json` 定义，经 loop 仓 `policy.yml` 下发为 **org ruleset**。
@@ -139,6 +164,7 @@
 ### 退出标准（骨架可用）
 
 - [ ] `grep -rn "product-x" --exclude-dir=waves .` 无输出；
+- [ ] 4 个自定义 label（`card`/`claimed`/`done`/`gripe`）已建；
 - [ ] `waves/WAVE-1.md` 是新产品自己的波次（含至少 1 张合法 ```json loop``` 卡）；
 - [ ] 推一次 `waves/**` 变更到 `main` → `materializer` workflow 跑绿、物化出 Card issue；
 - [ ] worker PAT 已发、沙盒 `loop next` 能领到卡。
