@@ -1,3 +1,4 @@
+# 由模板生成，本地禁止手改。变更请改模板（product-x）并走 loop 流程。见 TEMPLATE.md「生成层」。
 name: materializer
 on:
   push:
