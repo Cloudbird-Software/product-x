@@ -1,0 +1,86 @@
+# migration-test.yml — CI for migration dual-script verification (R3)
+#
+# Runs all migrations on a mock production snapshot:
+#   1. Forward: run all up.sh in order
+#   2. Rollback: run all down.sh in reverse order
+#   3. Non-rollbackable migrations (down.sh exits 1) → CI red
+#
+# This ensures every migration is forward-compatible + rollback-able,
+# except those explicitly marked NON_ROLLBACKABLE (which intentionally fail).
+
+name: migration-test
+
+on:
+  pull_request:
+    paths:
+      - 'migrations/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migration-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migrate:
+    name: Migration dual-script test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create mock production snapshot
+        run: |
+          mkdir -p snapshot/data
+          echo '{"version": "prod-snapshot", "tables": {}}' > snapshot/data/state.json
+          echo "Mock production snapshot created at $(pwd)/snapshot"
+      - name: Run forward migrations (up.sh)
+        run: |
+          set -euo pipefail
+          export MIGRATION_SNAPSHOT_DIR="$(pwd)/snapshot"
+          for dir in $(ls -d migrations/*/ | sort); do
+            up_script="${dir}up.sh"
+            if [ ! -f "$up_script" ]; then
+              echo "SKIP: $up_script not found"
+              continue
+            fi
+            echo "=== Running $up_script ==="
+            bash "$up_script"
+            echo "=== $up_script completed ==="
+          done
+          echo "All forward migrations passed."
+      - name: Run rollback migrations (down.sh, reverse order)
+        id: rollback
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          export MIGRATION_SNAPSHOT_DIR="$(pwd)/snapshot"
+          failed_count=0
+          for dir in $(ls -d migrations/*/ | sort -r); do
+            down_script="${dir}down.sh"
+            if [ ! -f "$down_script" ]; then
+              echo "SKIP: $down_script not found"
+              continue
+            fi
+            echo "=== Running $down_script ==="
+            if bash "$down_script"; then
+              echo "=== $down_script rollback OK ==="
+            else
+              echo "=== $down_script ROLLBACK FAILED (exit $?) ==="
+              failed_count=$((failed_count + 1))
+            fi
+          done
+          echo "failed_count=${failed_count}" >> "$GITHUB_OUTPUT"
+          exit $failed_count
+      - name: Check rollback results
+        if: steps.rollback.outcome == 'failure'
+        run: |
+          echo "::error::Migration rollback test failed."
+          echo "::error::One or more migrations are non-rollbackable (down.sh exited non-zero)."
+          echo "::error::If this migration is intentionally non-rollbackable, it must be reviewed by a human."
+          echo "::error::Non-rollbackable migrations are rejected by CI by design."
+          exit 1
+      - name: All migrations verified
+        if: steps.rollback.outcome == 'success'
+        run: |
+          echo "OK: All migrations are forward-compatible and rollback-able."
