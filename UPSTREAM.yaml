@@ -1,3 +1,5 @@
+# 由模板生成，本地禁止手改。变更请改模板（product-x）并走 loop 流程。见 TEMPLATE.md「生成层」。
+# 新增依赖请用 loop upstream <包名>（loop 流程登记），勿手改本文件。
 policy:
   min_age_days: 7
 packages: {}
