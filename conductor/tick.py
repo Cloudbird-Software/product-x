@@ -720,18 +720,102 @@ def main():
     plan_inbox_pack()           # [9]
     silent_auto_release()       # [10]
     race_mode_handler()         # [11]
+    canary_stale_check()        # [12] C-012: canary 合成工单存活检测
     print("=== tick complete ===")
 
 if __name__ == "__main__":
     main()
 
 # === C-012 impl step 1: Canary detection (synthetic issue label=canary) ===
-# 存活自检：每轮 tick 末尾扫 label=canary 的 issue，若 >24h 无更新则开 Incident 告警。
-# tier=trivial 仅加变量/注释，不改核心调度函数（变更量最小化）。
+# 每轮 tick 末尾扫 label=canary 的 issue，若 >24h 无更新则开 Incident 告警 + 在 GRIPE BOX 留言；
+# 若 label=canary 的 issue 不存在或已被清理，则告警静默（不重复发）。
 CANARY_LABEL = "canary"
 CANARY_STALE_HOURS = 24
-
-# === C-012 impl step 2: Canary stale alert hook stub (conductor tick 末尾调用) ===
-# 完整检测逻辑见 conductor/tick.py canary_stale_check() —— tier=trivial 仅接入占位，W4 扩并发时接入存活自检链路。
 CANARY_GRIPE_BOX_ISSUE = 1
+
+def canary_stale_check():
+    """C-012: 检测 canary 合成工单的新鲜度，超时告警，清理后静默。
+
+    - 扫 label=canary 的所有 open issue
+    - 若 > CANARY_STALE_HOURS 无更新：
+        * 在 GRIPE BOX (issue #1) 留言告警
+        * 开 Incident（限频：24h 内同一 canary stale 不重复 Incident）
+    - 若不存在 label=canary 的 issue → 视为合成工单已清理，告警静默（什么都不做）
+    """
+    print(f"[12] Canary stale check (label={CANARY_LABEL}, threshold={CANARY_STALE_HOURS}h)...")
+    now = datetime.datetime.utcnow()
+    threshold = now - datetime.timedelta(hours=CANARY_STALE_HOURS)
+
+    # 找所有 label=canary 的 open issue
+    p = gh("issue", "list", "-R", REPO, "--state", "open",
+           "--label", CANARY_LABEL, "--limit", "20",
+           "--json", "number,title,updatedAt,labels")
+    try:
+        items = json.loads(p.stdout or "[]")
+    except Exception:
+        items = []
+
+    if not items:
+        # 合成工单不存在/已清理 → 告警静默
+        print("  → no open canary-labeled issues found → silent (cleanup ok)")
+        return
+
+    stale_issues = []
+    for it in items:
+        try:
+            updated = datetime.datetime.fromisoformat(it["updatedAt"].replace("Z", ""))
+            if updated < threshold:
+                stale_issues.append(it)
+        except Exception:
+            pass
+
+    if not stale_issues:
+        print(f"  → {len(items)} canary issue(s), all fresh (< {CANARY_STALE_HOURS}h)")
+        return
+
+    # 有 stale canary → 告警
+    stale_nums = sorted([it["number"] for it in stale_issues])
+    print(f"  → STALE: {len(stale_issues)} canary issue(s) > {CANARY_STALE_HOURS}h: {stale_nums}")
+
+    # (1) 在 GRIPE BOX 留言（告警发出要求之一：issue comment）
+    try:
+        gh("issue", "comment", str(CANARY_GRIPE_BOX_ISSUE), "-R", REPO,
+           "--body",
+           f"[CANARY STALE ALERT] label={CANARY_LABEL} 的合成工单 >{CANARY_STALE_HOURS}h 无更新，"
+           f"loopd/conductor 可能断链。stale_issues={stale_nums} "
+           f"checked_at={now.isoformat()}Z")
+        print(f"  → alert posted to GRIPE BOX (issue #{CANARY_GRIPE_BOX_ISSUE})")
+    except Exception as e:
+        print(f"  → WARN: failed to comment on GRIPE BOX: {e}")
+
+    # (2) 开 Incident（限频：最近 24h 已有同类型 Incident 则跳过，防刷屏）
+    try:
+        recent_cutoff = now - datetime.timedelta(hours=24)
+        ip = gh("issue", "list", "-R", REPO, "--state", "open",
+                "--label", "incident", "--limit", "20",
+                "--json", "number,title,createdAt")
+        recent_incidents = json.loads(ip.stdout or "[]")
+        already_open = False
+        for ri in recent_incidents:
+            if "canary" in ri.get("title", "").lower() and "stale" in ri.get("title", "").lower():
+                try:
+                    created = datetime.datetime.fromisoformat(ri["createdAt"].replace("Z", ""))
+                    if created > recent_cutoff:
+                        already_open = True
+                        break
+                except Exception:
+                    pass
+        if already_open:
+            print("  → recent canary-stale Incident already open → skip duplicate (rate-limited)")
+        else:
+            open_incident(
+                f"Canary stale: label={CANARY_LABEL} >{CANARY_STALE_HOURS}h ({now.strftime('%Y-%m-%d')})",
+                f"label={CANARY_LABEL} 的合成工单超过 {CANARY_STALE_HOURS}h 无更新，loopd/conductor 链路可能断裂。\n\n"
+                f"Stale issues: {stale_nums}\n"
+                f"Checked at: {now.isoformat()}Z\n"
+                f"Action: check loopd heartbeat, canary workflow runs, and conductor cron."
+            )
+            print(f"  → opened Incident for canary stale")
+    except Exception as e:
+        print(f"  → WARN: Incident open failed: {e}")
 
