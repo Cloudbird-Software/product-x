@@ -55,3 +55,23 @@ jobs:
             echo "No contracts found"
             exit 1
           fi
+
+  paths-lease:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: paths-lease gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 .loop/gates/gate_paths.py
+
+  verdict-binding:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: verdict-binding gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 .loop/gates/gate_verdict.py
