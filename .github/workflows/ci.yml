@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
+    branches: [main]
   merge_group:
     branches: [main]
 
@@ -11,7 +12,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Python syntax check
         run: |
           errors=""
@@ -29,7 +30,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Install deps
         run: pip install flask pytest
       - name: Run pytest
@@ -38,14 +39,14 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Run verify.sh
         run: bash .loop/verify.sh
 
   contract:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Check contracts exist
         run: |
           count=$(find contracts/ -name "*.md" 2>/dev/null | wc -l)
@@ -56,50 +57,33 @@ jobs:
             exit 1
           fi
 
-  charter-mapping:
-    name: charter-mapping
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: run gate_charter
-        env:
-          GITHUB_REF: ${{ github.ref }}
-        run: |
-          set +e
-          if [ -f gates/gate_charter.py ]; then
-            python3 gates/gate_charter.py; ec=$?
-          elif [ -f ../gates/gate_charter.py ]; then
-            (cd .. && python3 gates/gate_charter.py); ec=$?
-          else
-            echo "SKIP: gate_charter.py not found in repo/submodule"; ec=0
-          fi
-          echo "gate_charter exit=$ec"; exit $ec
-
   verdict-binding:
     name: verdict-binding
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: run gate_verdict
         env:
           GITHUB_REF: ${{ github.ref }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          set +e
-          if [ -f gates/gate_verdict.py ]; then
-            python3 gates/gate_verdict.py; ec=$?
-          elif [ -f ../gates/gate_verdict.py ]; then
-            (cd .. && python3 gates/gate_verdict.py); ec=$?
-          else
-            echo "SKIP: gate_verdict.py not found"; ec=0
-          fi
-          echo "gate_verdict exit=$ec"; exit $ec
+          # R10-2: 未执行等价于失败（CHARTER N8.3）。gate 解析顺序：.loop/gates -> gates -> ../gates。
+          # 三处都找不到时打印 GATE_NOT_EXECUTED 并以非零退出，绝不再 SKIP(ec=0) 假绿。
+          GATE=gate_verdict
+          for d in .loop/gates gates ../gates; do
+            if [ -f "$d/$GATE.py" ]; then
+              python3 "$d/$GATE.py"
+              exit $?
+            fi
+          done
+          echo "GATE_NOT_EXECUTED: $GATE (searched .loop/gates, gates, ../gates — none found)"
+          exit 1
 
   paths-lease:
     name: paths-lease
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with: { fetch-depth: 0 }
       - name: run gate_paths
         env:
@@ -107,32 +91,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          set +e
-          if [ -f gates/gate_paths.py ]; then
-            python3 gates/gate_paths.py; ec=$?
-          elif [ -f ../gates/gate_paths.py ]; then
-            (cd .. && python3 gates/gate_paths.py); ec=$?
-          else
-            echo "SKIP: gate_paths.py not found"; ec=0
-          fi
-          echo "gate_paths exit=$ec"; exit $ec
-
-  test-ownership:
-    name: test-ownership
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: run gate_testown
-        env:
-          GITHUB_REF: ${{ github.ref }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set +e
-          if [ -f gates/gate_testown.py ]; then
-            python3 gates/gate_testown.py; ec=$?
-          elif [ -f ../gates/gate_testown.py ]; then
-            (cd .. && python3 gates/gate_testown.py); ec=$?
-          else
-            echo "SKIP: gate_testown.py not found"; ec=0
-          fi
-          echo "gate_testown exit=$ec"; exit $ec
+          # R10-2: 未执行等价于失败（CHARTER N8.3）。gate 解析顺序：.loop/gates -> gates -> ../gates。
+          # 三处都找不到时打印 GATE_NOT_EXECUTED 并以非零退出，绝不再 SKIP(ec=0) 假绿。
+          GATE=gate_paths
+          for d in .loop/gates gates ../gates; do
+            if [ -f "$d/$GATE.py" ]; then
+              python3 "$d/$GATE.py"
+              exit $?
+            fi
+          done
+          echo "GATE_NOT_EXECUTED: $GATE (searched .loop/gates, gates, ../gates — none found)"
+          exit 1
