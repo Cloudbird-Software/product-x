@@ -1,0 +1,56 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python syntax check
+        run: |
+          errors=""
+          while IFS= read -r -d '' f; do
+            if ! python3 -c "compile(open('$f').read(), '$f', 'exec')" 2>/dev/null; then
+              errors="$errors $f"
+            fi
+          done < <(find . -name "*.py" -not -path "./.git/*" -print0)
+          if [ -n "$errors" ]; then
+            echo "Syntax errors in:$errors"
+            exit 1
+          fi
+          echo "All Python files pass syntax check"
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: pip install flask pytest
+      - name: Run pytest
+        run: python3 -m pytest tests/ -v
+
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run verify.sh
+        run: bash .loop/verify.sh
+
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check contracts exist
+        run: |
+          count=$(find contracts/ -name "*.md" 2>/dev/null | wc -l)
+          if [ "$count" -ge 1 ]; then
+            echo "Contracts found: $count"
+          else
+            echo "No contracts found"
+            exit 1
+          fi
