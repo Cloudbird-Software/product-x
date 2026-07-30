@@ -65,6 +65,7 @@ jobs:
       - name: paths-lease gate
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: python3 .loop/gates/gate_paths.py
 
   verdict-binding:
@@ -74,4 +75,5 @@ jobs:
       - name: verdict-binding gate
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: python3 .loop/gates/gate_verdict.py
