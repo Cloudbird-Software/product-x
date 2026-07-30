@@ -25,12 +25,14 @@ def gh_json(*a):
         return None
 
 
-# 1. determine PR number (only pull_request event has refs/pull/N/merge)
-pr = None
-ref = os.environ.get("GITHUB_REF", "")
-parts = ref.split("/")
-if len(parts) >= 3 and parts[1] == "pull":
-    pr = parts[2]
+# 1. determine PR number (PR_NUMBER injected by ci.yml from github.event.pull_request.number;
+#    fallback to GITHUB_REF for local/non-workflow runs)
+pr = os.environ.get("PR_NUMBER") or None
+if not pr:
+    ref = os.environ.get("GITHUB_REF", "")
+    parts = ref.split("/")
+    if len(parts) >= 3 and parts[1] == "pull":
+        pr = parts[2]
 if not pr:
     print("SKIP: non-pull_request event (no PR number) - lease check waived")
     sys.exit(0)

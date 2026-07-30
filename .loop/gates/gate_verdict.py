@@ -30,6 +30,9 @@ def gh_json(*args):
 
 
 def get_pr_number():
+    pr = os.environ.get("PR_NUMBER")
+    if pr:
+        return pr
     ref = os.environ.get("GITHUB_REF", "")
     parts = ref.split("/")
     if len(parts) >= 3 and parts[1] == "pull":
