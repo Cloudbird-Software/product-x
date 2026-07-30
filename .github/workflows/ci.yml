@@ -11,7 +11,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Python syntax check
         run: |
           errors=""
@@ -29,7 +29,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install deps
         run: pip install flask pytest
       - name: Run pytest
@@ -38,14 +38,14 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Run verify.sh
         run: bash .loop/verify.sh
 
   contract:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Check contracts exist
         run: |
           count=$(find contracts/ -name "*.md" 2>/dev/null | wc -l)
@@ -60,18 +60,20 @@ jobs:
     name: charter-mapping
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      # N-12 traceability marker — profile:productx_ci gates 0/4
+      - name: gates.profile=productx_ci (charter)
+        run: echo "gates.profile=productx_ci gate=charter — N-12 traceability marker"
       - name: run gate_charter
         env:
           GITHUB_REF: ${{ github.ref }}
         run: |
-          set +e
           if [ -f gates/gate_charter.py ]; then
             python3 gates/gate_charter.py; ec=$?
           elif [ -f ../gates/gate_charter.py ]; then
             (cd .. && python3 gates/gate_charter.py); ec=$?
           else
-            echo "SKIP: gate_charter.py not found in repo/submodule"; ec=0
+            echo "FAIL: gate_charter.py not found (expected gates/gate_charter.py in repo)"; exit 2
           fi
           echo "gate_charter exit=$ec"; exit $ec
 
@@ -79,19 +81,21 @@ jobs:
     name: verdict-binding
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      # N-12 traceability marker — profile:productx_ci gates 1/4
+      - name: gates.profile=productx_ci (verdict)
+        run: echo "gates.profile=productx_ci gate=verdict — N-12 traceability marker"
       - name: run gate_verdict
         env:
           GITHUB_REF: ${{ github.ref }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          set +e
           if [ -f gates/gate_verdict.py ]; then
             python3 gates/gate_verdict.py; ec=$?
           elif [ -f ../gates/gate_verdict.py ]; then
             (cd .. && python3 gates/gate_verdict.py); ec=$?
           else
-            echo "SKIP: gate_verdict.py not found"; ec=0
+            echo "FAIL: gate_verdict.py not found"; exit 2
           fi
           echo "gate_verdict exit=$ec"; exit $ec
 
@@ -99,21 +103,23 @@ jobs:
     name: paths-lease
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with: { fetch-depth: 0 }
-      - name: run gate_paths
+      # N-12 traceability marker — profile:productx_ci gates 2/4
+      - name: gates.profile=productx_ci (paths)
+        run: echo "gates.profile=productx_ci gate=paths — N-12 traceability marker"
+      - name: run gate_paths --require
         env:
           GITHUB_REF: ${{ github.ref }}
           GH_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          set +e
           if [ -f gates/gate_paths.py ]; then
-            python3 gates/gate_paths.py; ec=$?
+            python3 gates/gate_paths.py --require; ec=$?
           elif [ -f ../gates/gate_paths.py ]; then
-            (cd .. && python3 gates/gate_paths.py); ec=$?
+            (cd .. && python3 gates/gate_paths.py --require); ec=$?
           else
-            echo "SKIP: gate_paths.py not found"; ec=0
+            echo "FAIL: gate_paths.py not found"; exit 2
           fi
           echo "gate_paths exit=$ec"; exit $ec
 
@@ -121,18 +127,34 @@ jobs:
     name: test-ownership
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      # N-12 traceability marker — profile:productx_ci gates 3/4
+      - name: gates.profile=productx_ci (testown)
+        run: echo "gates.profile=productx_ci gate=testown — N-12 traceability marker"
       - name: run gate_testown
         env:
           GITHUB_REF: ${{ github.ref }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          set +e
           if [ -f gates/gate_testown.py ]; then
             python3 gates/gate_testown.py; ec=$?
           elif [ -f ../gates/gate_testown.py ]; then
             (cd .. && python3 gates/gate_testown.py); ec=$?
           else
-            echo "SKIP: gate_testown.py not found"; ec=0
+            echo "FAIL: gate_testown.py not found"; exit 2
           fi
           echo "gate_testown exit=$ec"; exit $ec
+
+  # R10-2 acceptance 2: after signature gate run workflow scanners
+  workflow-scan:
+    name: scan-workflows (fake-green + actions-pinned)
+    runs-on: ubuntu-latest
+    needs: [paths-lease]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      # N-12 traceability marker — profile:productx_ci post-step
+      - name: gates.profile=productx_ci (scan-workflows)
+        run: echo "gates.profile=productx_ci step=scan_workflows — N-12 traceability marker"
+      - name: Run main_products_ci (no-fake-green + actions-pinned)
+        run: |
+          python3 -c "import sys; sys.path.insert(0, '.'); from conductor.scan_workflows import main_products_ci; sys.exit(main_products_ci())"

@@ -23,12 +23,15 @@ jobs:
         run: pip install PyYAML
       - name: speckit analyze
         id: speckit-analyze
+      # fake-green-ok: wave gate 检查步骤单步失败不阻断整体，collect 步骤最后 exit 1
         continue-on-error: true
         run: |
+        # fake-green-ok: specify-cli 可能已在 runner 上，pip install 失败属可接受 fallback
           pip install specify-cli 2>/dev/null || true
           specify analyze 2>&1 | tee speckit-analyze.txt || echo "speckit analyze not available (non-blocking)"
       - name: speckit checklist
         id: speckit-checklist
+      # fake-green-ok: wave gate 检查步骤单步失败不阻断整体，collect 步骤最后 exit 1
         continue-on-error: true
         run: |
           specify checklist 2>&1 | tee speckit-checklist.txt || echo "speckit checklist not available (non-blocking)"

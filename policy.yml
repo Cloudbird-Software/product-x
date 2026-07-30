@@ -1,0 +1,47 @@
+gates:
+  default_timeout_seconds: 120
+  timeout_seconds:
+    gate_paths: 60
+    gate_verdict: 60
+  profile:
+    # product-x CI 的 4 个 gate job（对应线上 settings 的 required check 子集）
+    productx_ci: [charter, verdict, paths, testown]
+    # loop 仓 gates/ 全集（8 个 skeleton 已实现）
+    loop_gates: [charter, diffsize, license, minage, paths, testown, upstream, verdict]
+
+audit:
+  shards_per_day: 2
+  max_new_findings_per_day: 8
+  min_confidence: 0.6
+  require_evidence: true
+  dedup: fingerprint            # sha256(lens + normalized_path + symbol + rule_id)
+  auto_throttle: {window_days: 14, adopt_rate_floor: 0.35, stale_close_days: 21}
+plan:
+  max_cards_per_wave: 14
+  value_vs_internal_ratio: 0.7
+  auto_approve_tiers: [trivial]
+  human_touch_budget: 3
+execute:
+  max_parallel_cards: 6          # 沙盒数可以远大于这个值
+  max_diff_lines: {trivial: 300, standard: 600, critical: 400}
+  max_cards_per_session: 6
+  race_tiers: [critical]         # 影子实现
+  sandbox_pool_min: 8
+upstream:
+  min_age_days: 7
+  trigger: on_wave_open          # ★不按周
+  auto_tier: {seam_a: trivial, seam_d: trivial, seam_b: standard, checkers_or_workflows: critical}
+license:
+  allow: [MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MPL-2.0, Unlicense, CC0-1.0, PSF-2.0, Python-2.0]
+review:
+  # 强模型验收环（见 docs/强模型验收环.md）。本段是该环唯一的方向盘。
+  enabled: true
+  tiers: [standard, critical]    # trivial 卡不跑强模型验收（成本控制）
+  max_reviews_per_day: 6         # Copilot CLI 在 Actions 里跑消耗 premium request
+  min_confidence: 0.6            # 低于此值的 claim 由校验器直接丢弃
+  required_check: false          # ★永不做 required check：模型不确定性不能卡合并线
+  reproduce_required: true       # ★未被 REPRODUCED 的 claim 不得触发任何代码改动（CHARTER N7）
+  heterogeneity_required: true   # 复现模型必须 != 提出 claim 的模型（CHARTER N6）
+  arbitration_samples: 3         # 复现结果冲突时凑够几个样本才交 planner 仲裁
+  harden_after_confirms: 2       # 同一 suggested_checker 被确认 N 次 → 强制转「写检查器」卡
+  precision_floor: 0.5           # reviewer_model 的 claim 精度低于此值 → 自动降权/改路由

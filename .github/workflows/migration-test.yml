@@ -28,7 +28,7 @@ jobs:
     name: Migration dual-script test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Create mock production snapshot
         run: |
           mkdir -p snapshot/data
@@ -51,6 +51,7 @@ jobs:
           echo "All forward migrations passed."
       - name: Run rollback migrations (down.sh, reverse order)
         id: rollback
+        # fake-green-ok: 迁移脚本失败时要继续执行下游步骤以收集诊断信息，失败时另有显式 exit 1
         continue-on-error: true
         run: |
           set -uo pipefail
