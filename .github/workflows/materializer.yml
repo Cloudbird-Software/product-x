@@ -1,17 +1,49 @@
-# 由模板生成，本地禁止手改。变更请改模板（product-x）并走 loop 流程。见 TEMPLATE.md「生成层」。
+# materializer.yml — 唯一能批量造 Card 的 workflow（W4-3）
+# 接口契约：product-x 的 materializer.yml 通过 actions/checkout 拉取 loop 仓库 main，
+# 再运行 python conductor/materialize.py；token 用 conductor App（org 级 secrets）。
+# 触发：push to product-x main, paths waves/**（波次 PR merge 后触发）
 name: materializer
 on:
   push:
     branches: [main]
     paths: ["waves/**"]
-permissions: {contents: read, issues: write}
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   materialize:
     runs-on: ubuntu-latest
     steps:
+      # 1. Checkout product-x（for waves/ and CHARTER.md）
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - run: python conductor/materialize.py waves/
+
+      # 2. Checkout loop repo（for conductor/materialize.py）
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: ${{ github.repository_owner }}/loop
+          path: loop
+          ref: main
+
+      # 3. Get conductor App token（org 级 secrets CONDUCTOR_APP_ID/CONDUCTOR_APP_KEY）
+      - id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
+        with:
+          app-id: ${{ secrets.CONDUCTOR_APP_ID }}
+          private-key: ${{ secrets.CONDUCTOR_APP_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      # 4. Install deps
+      - name: Install Python deps
+        run: pip install PyYAML
+
+      # 5. Run materializer
+      - name: Materialize wave cards
+        run: python3 loop/conductor/materialize.py waves/
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           LOOP_ORG: ${{ github.repository_owner }}
           LOOP_REPO: product-x
+          LOOP_WS: ${{ github.workspace }}
