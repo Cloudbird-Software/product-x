@@ -12,3 +12,4 @@ node_modules/
 
 # loop daemon state
 .loop/
+snapshot/
