@@ -1,7 +1,17 @@
-# AGENTS.md
+# AGENTS.md — product-x
 
-> 由模板生成，本地禁止手改。变更请改模板（product-x）并走 loop 流程。见 TEMPLATE.md「生成层」。
+本仓库是 LOOP 体系的参考实现样板仓库。
 
-本仓库由 loop 力工池自治维护。所有变更通过 loop 卡片驱动，由 impl 沙盒领取并实现，verify 沙盒裁决，最终合并至 main。
+## 快速入口
+- 章程（人类唯一可编辑真源）：CHARTER.md
+- loop pin：LOOP.yml
+- 外部依赖登记：UPSTREAM.yaml
+- CI 薄壳：.github/workflows/loop-*.yml（只引用 loop reusable workflow，零本地逻辑）
 
-禁止人工直接 push main。所有变更必须经 PR 提交，由 loop 流程合入。
+## 红线
+- 不复制 loop 机制文件（gates/lenses/conductor/loopd/prompts/settings）—— CHARTER N9
+- 不在样板里塞真实产品逻辑 —— CHARTER N8
+- 不自动修正 GitHub ruleset/secrets —— CHARTER N3
+
+## 工作流程
+见 loop 仓 prompts/P-continue.md（通过 loopd CAS 领卡推进状态机）。
