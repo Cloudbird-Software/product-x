@@ -30,10 +30,10 @@ permissions:
 
 jobs:
   review:
-    uses: Cloudbird-Software/loop/.github/workflows/reusable-review.yml@319ae44e103549e2ac26c19d781c4d8fb044fc78
+    uses: Cloudbird-Software/loop/.github/workflows/reusable-review.yml@660f191c30fcf2f09044953af7ba5ae3a3a6e784
     with:
       required: false
-      loop-sha: 319ae44e103549e2ac26c19d781c4d8fb044fc78
+      loop-sha: 660f191c30fcf2f09044953af7ba5ae3a3a6e784
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
