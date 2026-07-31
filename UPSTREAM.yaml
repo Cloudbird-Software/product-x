@@ -19,7 +19,7 @@ items:
   - name: Cloudbird-Software/loop
     seam: control-plane          # 特殊 seam：控制面（非 A/B/C/D）
     kind: workflow               # kind=workflow：pin 的是 reusable workflow 的 SHA
-    pin: "v0.2.5@5afe11dd91d424c1bc5736062b048bb1a0ef7dca"   # ← 由 upgrade 环回填
+    pin: "v0.2.6@319ae44e103549e2ac26c19d781c4d8fb044fc78"   # ← 由 upgrade 环回填
     degrade_path: "薄壳 workflow 不可用 → 产品仓 CI 全红 → 人类介入；无降级路径（控制面不可降级）"
     min_age_days: 7              # 覆盖 policy.min_age_days（loop 自身的冷静期）
     note: "loop 发新 tag 后，冷静期届满时自动开 bump PR：同步更新 LOOP.yml.loop.sha、UPSTREAM.yaml 与全部薄壳 workflow 的 @<sha>，三者必须一致（由 gate/loop-conformance 检查 6 保证）"

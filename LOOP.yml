@@ -28,8 +28,8 @@ product:
 loop:
   repo: Cloudbird-Software/loop
   # 必须同时写 tag 与完整 40 位 SHA。只写 tag 不接受（tag 可被移动）。
-  version: "v0.2.5"
-  sha: "5afe11dd91d424c1bc5736062b048bb1a0ef7dca"   # ← 由 upgrade 环回填，禁止手填 latest/main
+  version: "v0.2.6"
+  sha: "319ae44e103549e2ac26c19d781c4d8fb044fc78"   # ← 由 upgrade 环回填，禁止手填 latest/main
   # 落后窗口：超出即 gate/loop-conformance 由 warn 升为红（CHARTER Q6）
   max_lag_tags: 2
   max_lag_days: 30
